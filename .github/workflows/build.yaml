@@ -9,7 +9,7 @@ on:
 jobs:
   release:
     name: Build and Release Python Package to GitHub
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-k8s
     concurrency: release
     permissions:
       id-token: write
@@ -36,7 +36,7 @@ jobs:
   docker:
     name: Build and Release Docker Image
     needs: release
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-k8s
     permissions:
       contents: read
       packages: write
@@ -69,7 +69,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/{{ github.repository }}:${{ needs.release.outputs.version }}, ghcr.io/{{ github.repository }}:latest
+          tags: ghcr.io/${{ github.repository }}:${{ needs.release.outputs.version }}, ghcr.io/${{ github.repository }}:latest
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Generate artifact attestation
