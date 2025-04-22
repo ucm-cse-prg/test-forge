@@ -7,9 +7,23 @@ on:
       - main
 
 jobs:
+  get-token: 
+    runs-on: arc-runner-k8s
+    permissions: write-all
+    outputs:
+      token: ${{ steps.generate_token.outputs.token }}
+    steps:
+      - name: Generate a token
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_CLIENT_SECRET }}
+          owner: ${{ github.repository_owner }}
   release:
     name: Build and Release Python Package to GitHub
     runs-on: arc-runner-k8s
+    needs: get-token
     concurrency: release
     permissions:
       id-token: write
@@ -26,12 +40,12 @@ jobs:
         name: Python Semantic Release
         uses: python-semantic-release/python-semantic-release@master
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ needs.get-token.outputs.token }}
       - name: Publish package to GitHub Release
         uses: python-semantic-release/publish-action@main
         if: steps.release.outputs.released == 'true'
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ needs.get-token.outputs.token }}
           tag: ${{ steps.release.outputs.tag }}
   docker:
     name: Build and Release Docker Image
@@ -55,7 +69,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ needs.get-token.outputs.token }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
