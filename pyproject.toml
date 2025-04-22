@@ -1,6 +1,6 @@
 [project]
 name = "test-forge"
-version = "0.0.1"
+version = "0.0.0"
 description = "AI Based Sample Testing Engine leverages LLM to intelligently parse course materials, generate customized questions, and analyze student performance data, providing educators with actionable insights for data-driven pedagogy research. "
 readme = "README.md"
 requires-python = ">=3.13"
