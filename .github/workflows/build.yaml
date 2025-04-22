@@ -7,23 +7,9 @@ on:
       - main
 
 jobs:
-  get-token: 
-    runs-on: arc-runner-k8s
-    permissions: write-all
-    outputs:
-      token: ${{ steps.generate_token.outputs.token }}
-    steps:
-      - name: Generate a token
-        id: generate_token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
   release:
     name: Build and Release Python Package to GitHub
     runs-on: arc-runner-k8s
-    needs: get-token
     concurrency: release
     permissions:
       id-token: write
@@ -33,20 +19,27 @@ jobs:
       version: ${{ steps.release.outputs.version }}
       tag: ${{ steps.release.outputs.tag }}
     steps:
+      - name: Generate a token
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ needs.get-token.outputs.token }}
+          token: ${{ steps.generate_token.outputs.token }}
       - id: release
         name: Python Semantic Release
         uses: python-semantic-release/python-semantic-release@master
         with:
-          github_token: ${{ needs.get-token.outputs.token }}
+          github_token: ${{ steps.generate_token.outputs.token }}
       - name: Publish package to GitHub Release
         uses: python-semantic-release/publish-action@main
         if: steps.release.outputs.released == 'true'
         with:
-          github_token: ${{ needs.get-token.outputs.token }}
+          github_token: ${{ steps.generate_token.outputs.token }}
           tag: ${{ steps.release.outputs.tag }}
   docker:
     name: Build and Release Docker Image
@@ -61,23 +54,29 @@ jobs:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
     steps:
+      - name: Generate a token
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: main
+          token: token: ${{ steps.generate_token.outputs.token }}
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ needs.get-token.outputs.token }}
-
+          password: ${{ steps.generate_token.outputs.token }}
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
       - name: Build and push
         id: push
         uses: docker/build-push-action@v5
@@ -86,7 +85,6 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}:${{ needs.release.outputs.version }}, ghcr.io/${{ github.repository }}:latest
           labels: ${{ steps.meta.outputs.labels }}
-
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
