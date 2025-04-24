@@ -9,7 +9,7 @@ from fastapi import FastAPI
 
 from app.api import router
 from app.config import get_settings
-from app.mongo import close_mongo, init_mongo
+from app.mongo import close_mongo, init_mongo, check_mongo_connection
 
 # Load application settings from environment or configuration.
 SETTINGS = get_settings()
@@ -23,6 +23,7 @@ async def startup() -> None:
     This function is called when the FastAPI application starts up.
     It initializes the MongoDB connection and sets up Beanie ODM.
     """
+    #await check_mongo_connection()
     await init_mongo()
     # Additional startup logic can be added here.
 
@@ -63,6 +64,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
 
 # Create a FastAPI application instance, using the custom lifespan context manager.
 app = FastAPI(lifespan=lifespan)
+
 
 # Include API routes
 app.include_router(router)
