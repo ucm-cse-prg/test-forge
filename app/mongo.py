@@ -10,9 +10,14 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.config import get_settings
 from app.documents import DOCUMENTS
+import logging
+from fastapi import HTTPException
+
 
 # Retrieve application settings which include MongoDB connection details.
 SETTINGS = get_settings()
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 async def init_mongo() -> None:
@@ -36,6 +41,23 @@ async def init_mongo() -> None:
     # Initialize Beanie with the database and the list of document models.
     await init_beanie(database=db, document_models=DOCUMENTS)
 
+
+async def check_mongo_connection() -> bool:
+    try:
+        # Initialize the MongoDB client
+        client: AsyncIOMotorClient =  AsyncIOMotorClient(SETTINGS.mongodb_url)
+
+        # Ping the database to check if it's reachable
+        await client.admin.command('ping')
+
+        # If the ping is successful, log and return True
+        logging.debug("Successfully connected to MongoDB!")
+        return True
+
+    except Exception as e:
+        # If any exception occurs, log the error and raise an HTTPException
+        logging.error(f"Error connecting to MongoDB: {e}")
+        raise HTTPException(status_code=500, detail=f"Error connecting to MongoDB: {e}")
 
 async def drop_database() -> None:
     """
