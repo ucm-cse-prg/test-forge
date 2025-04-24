@@ -7,6 +7,19 @@ from functools import lru_cache
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from dotenv import load_dotenv
+from pathlib import Path
+import os
+
+env_path = Path('.') / 'dev_keys.env'
+load_dotenv(dotenv_path=env_path)
+mongo_username = os.getenv("mongo_username", "default_username")
+mongo_passwords = os.getenv("mongo_passwords", "default_password")
+mongo_databases = os.getenv("mongo_databases", "test-forge")
+mongo_host = os.getenv("mongo_host", "localhost")
+mongo_port = int(os.getenv("mongo_port", "27017"))
+mongo_uri = os.getenv("mongo_uri", "mongodb://localhost:27017")
+
 
 class Settings(BaseSettings):
     """
@@ -18,12 +31,12 @@ class Settings(BaseSettings):
     """
 
     mongodb_url: str = Field(
-        default="mongodb://localhost:27017",
+        default=mongo_uri,
         title="MongoDB URL",
         description="The URL of the MongoDB database.",
     )
     db_name: str = Field(
-        default="test_db",
+        default=mongo_databases,
         title="Database Name",
         description="The name of the database.",
     )
@@ -33,12 +46,12 @@ class Settings(BaseSettings):
         description="The origins of the API.",
     )
     host: str = Field(
-        default="localhost",
+        default=mongo_host,
         title="Host",
         description="The hostname to bind the server to.",
     )
     port: int = Field(
-        default=8000,
+        default=mongo_port,
         gt=0,
         lt=65536,
         title="Port",
