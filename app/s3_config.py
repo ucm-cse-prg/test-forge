@@ -6,7 +6,7 @@ import os
 
 endpoint_url = "http://rook-ceph-rgw-ceph-objectstore.rook-ceph.svc:80"
 
-env_path = Path('.') / 'dev_keys.env'
+env_path = Path('.') / 'creds.env'
 load_dotenv(dotenv_path=env_path)
 aws_access_key_id = os.getenv("aws_access_key_id")
 aws_secret_access_key = os.getenv("aws_secret_access_key")

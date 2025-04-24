@@ -13,3 +13,5 @@ wheels/
 .vscode/settings.json
 .coverage
 coverage.lcov
+
+creds.env

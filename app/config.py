@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 import os
 
-env_path = Path('.') / 'dev_keys.env'
+env_path = Path('.') / 'creds.env'
 load_dotenv(dotenv_path=env_path)
 mongo_username = os.getenv("mongo_username", "default_username")
 mongo_passwords = os.getenv("mongo_passwords", "default_password")
