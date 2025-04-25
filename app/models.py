@@ -21,11 +21,12 @@ class FileModel(BaseModel):
             raise ValueError("Filename must be less than 50 characters")
         return v
 
+
 class MetaDataModel(BaseModel):
     filename: Optional[str] = Field(max_length=50)
-    s3_key: str = Field()
-    content_type: Optional[str] = Field()
-    file_size: Optional[int] = Field()
-    uploaded_at: Optional[datetime] = Field()
-    uploader_id: Optional[str] = Field()
+    s3_key: str = Field(default="")
+    uploaded_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    content_type: Optional[str] = Field(default="")
+    file_size: Optional[int] = Field(default=0)
+    uploader_id: Optional[str] = None
 

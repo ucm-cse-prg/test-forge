@@ -3,10 +3,7 @@ Database document models for Beanie ODM with MongoDB.
 """
 
 from beanie import Document
-from pydantic import Field
-from datetime import datetime
-from typing import Optional
-from app.models import FileModel
+from app.models import MetaDataModel
 
 # Define Beanie document models that represent your MongoDB collections.
 # Use Beanie's Document base class combined with Pydantic models
@@ -17,15 +14,8 @@ When someone needs to access the file, the get_all function generates a presigne
 of the metadata. 
 """
 
-class FileMetaData(FileModel, Document):
-    filename: Optional[str] = Field(default="")
-    s3_key: str = Field(default="")
-    uploaded_at: datetime = Field(default_factory=datetime.utcnow)
-    content_type: Optional[str] = Field(default="")
-    file_size: Optional[int] = Field(default=0) # filesize will be retrieved as bytes (ex. 120kB = 120000 bytes)
-    uploader_id: Optional[str] = None
-
-    class Settings: 
+class FileMetaData(Document, MetaDataModel):
+    class Settings:
         collection = "file_metadata"
 
 
