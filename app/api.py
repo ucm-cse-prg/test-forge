@@ -8,8 +8,8 @@ from fastapi.responses import HTMLResponse
 
 import app.actions as Actions
 from app.exceptions import APIException
-from app.models import UploadResponse, GetFile, UpdateRequest
-
+#from app.schemas import UploadFileResponse, GetFileResponse, UpdateFileRequest
+import app.schemas as Schemas
 
 router = APIRouter()
 
@@ -40,7 +40,7 @@ async def root() -> HTMLResponse:
 
 
 @router.post("/upload/")
-async def upload_material(file: UploadFile = File(None), uploader_id: Optional[str] = None) -> UploadResponse:
+async def upload_material(file: UploadFile = File(None), uploader_id: Optional[str] = None) -> Schemas.UploadFileResponse:
     if file is None:
         raise HTTPException(status_code=400, detail="File is required.")
     try:
@@ -63,8 +63,8 @@ async def delete_material(s3_key: str) -> None:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/get_all/", response_model=List[GetFile])
-async def retrieve_all_files() -> List[GetFile]:
+@router.get("/get_all/", response_model=List[Schemas.GetFileResponse])
+async def retrieve_all_files() -> List[Schemas.GetFileResponse]:
     try:
         return await Actions.get_all_files()
     except Exception as e:
@@ -72,7 +72,7 @@ async def retrieve_all_files() -> List[GetFile]:
     
 
 @router.patch("/update/{s3_key}")
-async def update_material(s3_key: str, payload: UpdateRequest) -> dict:
+async def update_material(s3_key: str, payload: Schemas.UpdateFileRequest) -> dict:
     try:
         await Actions.update_file_metadata(s3_key, payload.new_filename)
         return {"detail": "File metadata updated successfully."}

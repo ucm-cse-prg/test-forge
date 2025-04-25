@@ -7,19 +7,6 @@ from functools import lru_cache
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from dotenv import load_dotenv
-from pathlib import Path
-import os
-
-env_path = Path('.') / 'creds.env'
-load_dotenv(dotenv_path=env_path)
-mongo_username = os.getenv("mongo_username", "default_username")
-mongo_passwords = os.getenv("mongo_passwords", "default_password")
-mongo_databases = os.getenv("mongo_databases", "test-forge")
-mongo_host = os.getenv("mongo_host", "localhost")
-mongo_port = int(os.getenv("mongo_port", "27017"))
-mongo_uri = os.getenv("mongo_uri", "mongodb://localhost:27017")
-
 
 class Settings(BaseSettings):
     """
@@ -31,12 +18,12 @@ class Settings(BaseSettings):
     """
 
     mongodb_url: str = Field(
-        default=mongo_uri,
+        default="mongodb://localhost:27017",
         title="MongoDB URL",
         description="The URL of the MongoDB database.",
     )
     db_name: str = Field(
-        default=mongo_databases,
+        default="test_db",
         title="Database Name",
         description="The name of the database.",
     )
@@ -46,12 +33,12 @@ class Settings(BaseSettings):
         description="The origins of the API.",
     )
     host: str = Field(
-        default=mongo_host,
+        default="localhost",
         title="Host",
         description="The hostname to bind the server to.",
     )
     port: int = Field(
-        default=mongo_port,
+        default=8000,
         gt=0,
         lt=65536,
         title="Port",
@@ -63,8 +50,20 @@ class Settings(BaseSettings):
         description="Enable or disable automatic reloading of the server.",
     )
 
+    # the aws access keys for the s3 bucket. 
+    aws_access_key_id: str = Field(
+        default="",
+        title="AWS Access Key ID",
+        description="The AWS access key ID for authentication.",
+    )
+
+    aws_secret_access_key: str = Field(
+        default="",
+        title="AWS Secret Access Key",
+        description="The AWS secret access key for authentication.",
+    )
     # Load settings from a .env file.
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file="creds.env") # using creds.env, not just .env
 
 
 settings = Settings()

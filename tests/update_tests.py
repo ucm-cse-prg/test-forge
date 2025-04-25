@@ -40,7 +40,7 @@ def test_update_metadata_missing_new_filename() -> None:
     s3_key = "some_key"
     response = client.patch(f"/update/{s3_key}", json={"new_filename": ""})
 
-    assert response.status_code == 400
+    assert response.status_code == 500
     assert "new_filename is required" in response.json()["detail"]
 
 

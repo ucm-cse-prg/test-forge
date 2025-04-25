@@ -5,13 +5,13 @@ from fastapi import FastAPI, UploadFile
 from app.app import app
 from app.actions import upload_file
 from pytest_mock import MockerFixture
-from app.models import UploadResponse
+from app.schemas import UploadFileResponse
 
 client = TestClient(app)
 
 
 def test_upload_success(mocker: MockerFixture) -> None:
-    mock_response = UploadResponse(filename="test.txt", s3_key="t3stk3y123", url="testurl/aws/blahbahblah")
+    mock_response = UploadFileResponse(filename="test.txt", s3_key="t3stk3y123", url="testurl/aws/blahbahblah")
     
     mocker.patch("app.actions.upload_file", return_value=mock_response)
     

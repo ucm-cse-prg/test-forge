@@ -6,7 +6,7 @@ from app.app import app
 from pytest_mock import MockerFixture
 from unittest.mock import patch, MagicMock
 from app.s3_config import BUCKET_NAME
-from app.models import GetFile
+from app.schemas import GetFileResponse
 
 client = TestClient(app)
 
@@ -14,8 +14,8 @@ client = TestClient(app)
 def test_get_all_files_success(mock_get_all_files: MagicMock) -> None:
     # Set up the mock to return a list of GetFile objects
     mock_get_all_files.return_value = [
-        GetFile(filename="file1.pdf", s3_key="abc123_file1.pdf", url="https://mocked_s3/abc123_file1.pdf"),
-        GetFile(filename="file2.docx", s3_key="def456_file2.docx", url="https://mocked_s3/def456_file2.docx")
+        GetFileResponse(filename="file1.pdf", s3_key="abc123_file1.pdf", url="https://mocked_s3/abc123_file1.pdf"),
+        GetFileResponse(filename="file2.docx", s3_key="def456_file2.docx", url="https://mocked_s3/def456_file2.docx")
     ]
 
     response = client.get("/get_all/")
