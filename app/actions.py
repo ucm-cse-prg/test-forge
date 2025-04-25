@@ -10,8 +10,9 @@ from fastapi import UploadFile, HTTPException, Query
 from botocore.exceptions import ClientError
 import uuid
 
-from app.exceptions import InternalServerError
+#from app.exceptions import InternalServerError
 # from app.models import UploadResponse, GetFile
+import app.exceptions as exceptions
 from app.models import FileModel
 from app.schemas import UploadFileResponse, GetFileResponse
 from app.s3_config import s3_client, BUCKET_NAME
@@ -29,7 +30,7 @@ def run_action(action):
             return await action(*args, **kwargs)
         except Exception as e:
             # Convert APIException into HTTPException with corresponding code and message.
-            raise InternalServerError(str(e))
+            raise exceptions.InternalServerError(str(e))
 
     return wrapper
 
@@ -74,15 +75,8 @@ async def upload_metadata(file: UploadFile, file_key: str, content_type: Optiona
         ExpiresIn=3600  # URL expiration time in seconds
     ),)
     
-    # metadata: FileMetaData = await FileMetaData(
-    #         filename=file.filename,
-    #         s3_key=file_key,
-    #         content_type=content_type,
-    #         file_size=file_size,
-    #         uploader_id=uploader_id,
-    #     ).insert()
     metadata = await FileMetaData(
-        filename=file_metadata.filename, # errors come up if i dont include the "or unknown" part. 
+        filename=file_metadata.filename,
         s3_key=file_metadata.s3_key,
         content_type=content_type,
         file_size=file.size,
@@ -90,18 +84,18 @@ async def upload_metadata(file: UploadFile, file_key: str, content_type: Optiona
     ).insert()
  
     if not metadata:
-        raise HTTPException(status_code=500, detail="Failed to save metadata to MongoDB.")
+        raise exceptions.FailedToSaveError(detail="Failed to save metadata to MongoDB.")
     
 @run_action
 async def delete_metadata(s3_key: str) -> None:
     if not s3_key:
-        raise HTTPException(status_code=400, detail="s3_key is required.")
+        raise exceptions.MissingParameterError(detail="s3_key is required.")
     
     metadata = await FileMetaData.find_one(FileMetaData.s3_key == s3_key)
     if metadata:
         await metadata.delete()
     else:
-        raise HTTPException(status_code=404, detail="Metadata not found.")
+        raise exceptions.FileNotFoundError(detail="Metadata not found.")
 
 
 @run_action
@@ -114,7 +108,7 @@ async def get_metadata() -> List[FileMetaData]:
 @run_action
 async def upload_file(file: UploadFile, uploader_id: Optional[str] = None) -> UploadFileResponse:
     if not file.filename:
-        raise HTTPException(status_code=400, detail="Uploaded file must have a filename.")
+        raise exceptions.MissingParameterError(detail="Uploaded file must have a filename.")
 
     file_key = f"{uuid.uuid4()}_{file.filename}" # this is the unique file key that will be used for other operations like deletion.
     # uuid is a unique identifier that pretty much acts as the file id in the s3 bucket.
@@ -123,9 +117,7 @@ async def upload_file(file: UploadFile, uploader_id: Optional[str] = None) -> Up
     # getting the content type and the file size for the metadata. 
     content_type = file.content_type
 
-    file.file.seek(0, 2)
-    file_size = file.file.tell()  # move the file pointer to the end of the file to get the size
-    file.file.seek(0)
+    file_size = file.size # UploadFile objects have a size attribute
 
     s3_client.upload_fileobj(file.file, BUCKET_NAME, file_key)
 
@@ -149,7 +141,7 @@ async def upload_file(file: UploadFile, uploader_id: Optional[str] = None) -> Up
 @run_action
 async def delete_file(s3_key: str = Query(default=None, description='The s3 key given to the uploaded file when uploading')) -> None:
     if s3_key is None:
-        raise HTTPException(status_code=400, detail="The 's3_key' query parameter is required.")
+        raise exceptions.MissingParameterError(detail="The 's3_key' query parameter is required.")
     
     try:
         # first you gotta check if the file exists before deleting it. 
@@ -157,7 +149,7 @@ async def delete_file(s3_key: str = Query(default=None, description='The s3 key 
     except ClientError as e:
         if e.response['Error']['Code'] == '404':
             # if it doesnt, raise a 404 error. 
-            raise HTTPException(status_code=404, detail="File not found")
+            raise exceptions.FileNotFoundError(detail="File not found")
         else:
             raise
         
@@ -191,17 +183,15 @@ async def get_all_files() -> List[GetFileResponse]:
 
 @run_action
 async def update_file_metadata(s3_key: str, new_filename: str) -> None:
-    if not s3_key:
-        raise HTTPException(status_code=400, detail="s3_key is required.")
-    if not new_filename:
-        raise HTTPException(status_code=400, detail="new_filename is required.")
+    if not s3_key or not new_filename:
+        raise exceptions.MissingParameterError(detail="s3_key or new_filename is missing.")
     
     existing_metadata = await FileMetaData.find_one(FileMetaData.s3_key == s3_key)
     if not existing_metadata:
-        raise HTTPException(status_code=404, detail="File metadata not found.")
+        raise exceptions.FileNotFoundError(detail="File metadata not found.")
     
     if not existing_metadata.filename:
-        raise HTTPException(status_code=400, detail="Filename is missing in the metadata.")
+        raise exceptions.MissingParameterError(detail="Filename is missing in the metadata.")
     
     old_extension = existing_metadata.filename.split(".")[-1] # extracting the old extension
         
@@ -226,17 +216,13 @@ async def update_file_metadata(s3_key: str, new_filename: str) -> None:
 
 @run_action
 async def replace_file(s3_key: str, new_file: UploadFile) -> None:
-    if not s3_key:
-        raise HTTPException(status_code=400, detail="s3_key is required.")
-    if not new_file:
-        raise HTTPException(status_code=400, detail="new_file is required.")
+    if not s3_key or not new_file:
+        raise exceptions.MissingParameterError(detail="s3_key or new_file is missing.")
     
     s3_client.head_object(Bucket=BUCKET_NAME, Key=s3_key) # making sure the file exists
         
-    # recalculating the file size
-    new_file.file.seek(0, 2)
-    new_file_size = new_file.file.tell()
-    new_file.file.seek(0)
+    # getting the new file size
+    new_file_size = new_file.size
 
     s3_client.upload_fileobj(new_file.file, BUCKET_NAME, s3_key) # uploading with the same key
         
@@ -248,4 +234,4 @@ async def replace_file(s3_key: str, new_file: UploadFile) -> None:
         existing_metadata.file_size = new_file_size
         await existing_metadata.save()
     else:
-        raise HTTPException(status_code=404, detail="File metadata not found.")
+        raise exceptions.FileNotFoundError(detail="File metadata not found.")
