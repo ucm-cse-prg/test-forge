@@ -63,6 +63,7 @@ uvx/
 # Environment variables and secrets
 .env
 .env.*
+creds.env
 
 # Other files to ignore
 *.bak
