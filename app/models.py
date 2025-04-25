@@ -6,6 +6,7 @@ Request/response schemas as well as database documents are derived from these mo
 """
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional
+from datetime import datetime
 
 
 class FileModel(BaseModel):
@@ -19,3 +20,12 @@ class FileModel(BaseModel):
         if len(v) > 50:
             raise ValueError("Filename must be less than 50 characters")
         return v
+
+class MetaDataModel(BaseModel):
+    filename: Optional[str] = Field(max_length=50)
+    s3_key: str = Field()
+    content_type: Optional[str] = Field()
+    file_size: Optional[int] = Field()
+    uploaded_at: Optional[datetime] = Field()
+    uploader_id: Optional[str] = Field()
+

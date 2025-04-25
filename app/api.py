@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 import typing
 from typing import List, Optional
 from functools import wraps
@@ -67,6 +68,14 @@ async def delete_material(s3_key: str) -> None:
 async def retrieve_all_files() -> List[Schemas.GetFileResponse]:
     try:
         return await Actions.get_all_files()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+@router.get("/get_metadata/", response_model=List[Schemas.GetMetaDataResponse])
+async def retrieve_all_metadata() -> List[Schemas.GetMetaDataResponse]:
+    try:
+        return await Actions.get_metadata()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
