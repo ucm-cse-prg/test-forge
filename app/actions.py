@@ -13,10 +13,10 @@ import uuid
 #from app.exceptions import InternalServerError
 # from app.models import UploadResponse, GetFile
 import app.exceptions as exceptions
-from app.models import FileModel
+from app.models import FileModel, CourseModel
 from app.schemas import UploadFileResponse, GetFileResponse
 from app.s3_config import s3_client, BUCKET_NAME
-from app.documents import FileMetaData
+from app.documents import FileMetaData, Course
 
 PROJECT_METADATA = metadata("fastapi-app")
 
@@ -65,8 +65,9 @@ async def home_page() -> str:
     return content
 
 @run_action
-async def upload_metadata(file: UploadFile, file_key: str, content_type: Optional[str] = None, file_size: Optional[int] = 0, uploader_id: Optional[str] = None) -> None:
+async def upload_metadata(file: UploadFile, course_id: str, file_key: str, content_type: Optional[str] = None, file_size: Optional[int] = 0, uploader_id: Optional[str] = None) -> None:
     file_metadata = FileModel(
+        course_id = course_id,
         filename=file.filename,
         s3_key=file_key,
         url=s3_client.generate_presigned_url(
@@ -76,6 +77,7 @@ async def upload_metadata(file: UploadFile, file_key: str, content_type: Optiona
     ),)
     
     metadata = await FileMetaData(
+        course_id = course_id,
         filename=file_metadata.filename,
         s3_key=file_metadata.s3_key,
         content_type=content_type,
@@ -106,11 +108,12 @@ async def get_metadata() -> List[FileMetaData]:
 
 
 @run_action
-async def upload_file(file: UploadFile, uploader_id: Optional[str] = None) -> UploadFileResponse:
+async def upload_file(file: UploadFile, course_id: str, uploader_id: Optional[str] = None) -> UploadFileResponse:
     if not file.filename:
         raise exceptions.MissingParameterError(detail="Uploaded file must have a filename.")
 
-    file_key = f"{uuid.uuid4()}_{file.filename}" # this is the unique file key that will be used for other operations like deletion.
+    # adding the course id to distinguish between files uploaded to different courses. 
+    file_key = f"{course_id}_{uuid.uuid4()}_{file.filename}" # this is the unique file key that will be used for other operations like deletion.
     # uuid is a unique identifier that pretty much acts as the file id in the s3 bucket.
     # this prevents even files with the exact same name from having the same unique identifier. 
 
@@ -132,9 +135,9 @@ async def upload_file(file: UploadFile, uploader_id: Optional[str] = None) -> Up
         ExpiresIn=3600  # URL expiration time in seconds
     )
 
-    await upload_metadata(file, file_key, content_type, file_size , uploader_id) # saving the metadata to the mongo db.
+    await upload_metadata(file, course_id, file_key, content_type, file_size , uploader_id) # saving the metadata to the mongo db.
 
-    return UploadFileResponse(filename=file.filename, s3_key=file_key, url=file_url)
+    return UploadFileResponse(course_id=course_id, filename=file.filename, s3_key=file_key, url=file_url)
 
     
 # delete_file requries the s3_key associated with the file to be deleted. 
@@ -166,6 +169,7 @@ async def get_all_files() -> List[GetFileResponse]:
     files = [] 
     for obj in contents:
         s3_key = obj["Key"]
+        course_id = s3_key.split("_")[0] # extracting the course id from the s3 key
         filename = "_".join(s3_key.split("_")[1:]) # removing the uuid part of the filename 
             
         # Commented code below is for public urls, will delete when i have access to the kubernetes cluster. 
@@ -176,7 +180,7 @@ async def get_all_files() -> List[GetFileResponse]:
             ExpiresIn=3600  # URL expiration time in seconds
         )
 
-        files.append(GetFileResponse(filename=filename, s3_key=s3_key, url=file_url))
+        files.append(GetFileResponse(course_id=course_id, filename=filename, s3_key=s3_key, url=file_url))
 
     return files
 
@@ -235,3 +239,28 @@ async def replace_file(s3_key: str, new_file: UploadFile) -> None:
         await existing_metadata.save()
     else:
         raise exceptions.FileNotFoundError(detail="File metadata not found.")
+
+
+#--------------------------------------------------------------------------------------------------------------------------
+# Course related actions
+@run_action
+async def create_course(course: CourseModel) -> Course:
+    if not course.course_id or not course.course_name:
+        raise exceptions.MissingParameterError(detail="course_id and course_name are required.")
+    
+    # im not sure what "collaborators" is supposed to entail, so for now its just going to be a list of strings. 
+    # I assume its going to be a bunch of users, most likely users of professor type. 
+    if course.collaborators is None:
+        course.collaborators = []
+    
+    course = Course(
+        course_id=course.course_id,
+        course_name=course.course_name,
+        course_description=course.course_description,
+        visibility=course.visibility,
+        collaborators=course.collaborators,
+        creator_id=course.creator_id
+    )
+    
+    await course.insert()
+    return course

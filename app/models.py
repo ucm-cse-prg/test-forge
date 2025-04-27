@@ -9,7 +9,25 @@ from typing import Optional
 from datetime import datetime
 
 
+class CourseModel(BaseModel):
+    course_id: str = Field(max_length=10) # going to make the course id the foreign key for Files. 
+    course_name: str = Field(max_length=200)
+    course_description: Optional[str] = Field(max_length=200)
+    visibility: str = Field(default='public')
+    collaborators: list[str] = Field(default_factory=list)
+    creator_id: Optional[str] = Field(default="")
+    date_created: datetime = Field(default_factory=datetime.utcnow)
+
+    @field_validator("course_id")
+    @classmethod
+    def check_id_length(cls, v: str) -> str:
+        if len(v) > 10:
+            raise ValueError("Course ID must be less than 10 characters") # assuming course id would be something like "CSE195"
+        return v
+
+
 class FileModel(BaseModel):
+    course_id: str = Field(max_length=200)
     filename: Optional[str] = Field(max_length=50)
     s3_key: str = Field()
     url: str = ""
@@ -23,10 +41,14 @@ class FileModel(BaseModel):
 
 
 class MetaDataModel(BaseModel):
+    course_id: str = Field(max_length=10) # the foreign key for the course the file belongs to
     filename: Optional[str] = Field(max_length=50)
     s3_key: str = Field(default="")
     uploaded_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
     content_type: Optional[str] = Field(default="")
     file_size: Optional[int] = Field(default=0)
     uploader_id: Optional[str] = None
+
+
+
 

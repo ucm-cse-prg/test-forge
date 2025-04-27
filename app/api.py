@@ -9,8 +9,8 @@ from fastapi.responses import HTMLResponse
 
 import app.actions as Actions
 from app.exceptions import APIException
-#from app.schemas import UploadFileResponse, GetFileResponse, UpdateFileRequest
 import app.schemas as Schemas
+import app.models as Models
 
 router = APIRouter()
 
@@ -41,16 +41,16 @@ async def root() -> HTMLResponse:
 
 
 @router.post("/upload/")
-async def upload_material(file: UploadFile = File(None), uploader_id: Optional[str] = None) -> Schemas.UploadFileResponse:
+@http_exception
+async def upload_material(file: UploadFile = File(None), uploader_id: Optional[str] = None, course_id: str = "") -> Schemas.UploadFileResponse:
     if file is None:
         raise HTTPException(status_code=400, detail="File is required.")
-    try:
-        return await Actions.upload_file(file, uploader_id)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error{str(e)}")
+    
+    return await Actions.upload_file(file, course_id, uploader_id)
 
 
 @router.delete("/delete/{s3_key}")
+@http_exception
 async def delete_material(s3_key: str) -> None:
     try:
         return await Actions.delete_file(s3_key)
@@ -59,46 +59,41 @@ async def delete_material(s3_key: str) -> None:
         if e.response["Error"]["Code"] == "NoSuchKey":
             raise HTTPException(status_code=500, detail=f"No file found with key '{s3_key}'")
         raise HTTPException(status_code=500, detail=str(e))
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/get_all/", response_model=List[Schemas.GetFileResponse])
+@http_exception
 async def retrieve_all_files() -> List[Schemas.GetFileResponse]:
-    try:
-        return await Actions.get_all_files()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return await Actions.get_all_files()
     
 
 @router.get("/get_metadata/", response_model=List[Schemas.GetMetaDataResponse])
+@http_exception
 async def retrieve_all_metadata() -> List[Schemas.GetMetaDataResponse]:
-    try:
-        return await Actions.get_metadata()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return await Actions.get_metadata()
     
 
 @router.patch("/update/{s3_key}")
+@http_exception
 async def update_material(s3_key: str, payload: Schemas.UpdateFileRequest) -> dict:
-    try:
-        await Actions.update_file_metadata(s3_key, payload.new_filename)
-        return {"detail": "File metadata updated successfully."}
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    await Actions.update_file_metadata(s3_key, payload.new_filename)
+    return {"detail": "File metadata updated successfully."}
     
     
 @router.patch("/replace/{s3_key}")
+@http_exception
 async def replace_material(s3_key: str, file: UploadFile = File(None)) -> dict:
     if file is None:
         raise HTTPException(status_code=400, detail="File is required.")
-    try:
-        await Actions.replace_file(s3_key, file)
-        return {"detail": "File replaced successfully."}
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    
+    await Actions.replace_file(s3_key, file)
+    return {"detail": "File replaced successfully."}
+
+
+#-------------------------------------------------------------------------------------------------------------------------
+# Course related endpoints
+
+@router.post("/create_course/", response_model=Schemas.GetCourseResponse)
+@http_exception
+async def create_course(course: Models.CourseModel) -> Schemas.GetCourseResponse:
+    return await Actions.create_course(course)
