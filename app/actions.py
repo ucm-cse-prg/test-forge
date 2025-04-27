@@ -6,9 +6,10 @@ import typing
 from typing import List, Optional
 from functools import wraps
 from importlib.metadata import metadata
-from fastapi import UploadFile, HTTPException, Query
+from fastapi import UploadFile, Query
 from botocore.exceptions import ClientError
 import uuid
+from datetime import datetime
 
 #from app.exceptions import InternalServerError
 # from app.models import UploadResponse, GetFile
@@ -30,6 +31,7 @@ def run_action(action):
             return await action(*args, **kwargs)
         except Exception as e:
             # Convert APIException into HTTPException with corresponding code and message.
+            print (f"Error in {action.__name__}: {e}") # just to make testing easier. 
             raise exceptions.InternalServerError(str(e))
 
     return wrapper
@@ -64,8 +66,23 @@ async def home_page() -> str:
 
     return content
 
+#--------------------------------------------------------------------------------------------------------------------------
+# functions to make files go public.
+@run_action 
+async def make_files_public() -> None:
+    now = datetime.now()
+    metadata_list = await FileMetaData.find_all().to_list()
+
+    for data in metadata_list:
+        if data.go_public_at and data.go_public_at <= now: # making sure that the metadata actually has a go_public_at date and that the date is in the past or equal to the current datetime.
+            if data.visibility != "public": # making sure the file isnt already public
+                data.visibility = "public"
+                await data.save()
+
+#--------------------------------------------------------------------------------------------------------------------------
+# Metadata related actions
 @run_action
-async def upload_metadata(file: UploadFile, course_id: str, file_key: str, content_type: Optional[str] = None, file_size: Optional[int] = 0, uploader_id: Optional[str] = None) -> None:
+async def upload_metadata(file: UploadFile, course_id: str, file_key: str, content_type: Optional[str] = None, file_size: Optional[int] = 0, uploader_id: Optional[str] = None, visibility: Optional[str] = "private", go_public_at: Optional[datetime] = None) -> None:
     file_metadata = FileModel(
         course_id = course_id,
         filename=file.filename,
@@ -74,7 +91,8 @@ async def upload_metadata(file: UploadFile, course_id: str, file_key: str, conte
         'get_object',
         Params={'Bucket': BUCKET_NAME, 'Key': file_key},
         ExpiresIn=3600  # URL expiration time in seconds
-    ),)
+    ),
+    )
     
     metadata = await FileMetaData(
         course_id = course_id,
@@ -83,6 +101,8 @@ async def upload_metadata(file: UploadFile, course_id: str, file_key: str, conte
         content_type=content_type,
         file_size=file.size,
         uploader_id=uploader_id,
+        visibility=visibility,
+        go_public_at=go_public_at,
     ).insert()
  
     if not metadata:
@@ -106,9 +126,10 @@ async def get_metadata() -> List[FileMetaData]:
         metadata = await FileMetaData.find_all().to_list()
         return metadata
 
-
+#--------------------------------------------------------------------------------------------------------------------------
+# File related actions
 @run_action
-async def upload_file(file: UploadFile, course_id: str, uploader_id: Optional[str] = None) -> UploadFileResponse:
+async def upload_file(file: UploadFile, course_id: str, uploader_id: Optional[str] = None, visibility: Optional[str] = 'private', go_public_at: Optional[datetime] = None) -> UploadFileResponse:
     if not file.filename:
         raise exceptions.MissingParameterError(detail="Uploaded file must have a filename.")
 
@@ -135,9 +156,9 @@ async def upload_file(file: UploadFile, course_id: str, uploader_id: Optional[st
         ExpiresIn=3600  # URL expiration time in seconds
     )
 
-    await upload_metadata(file, course_id, file_key, content_type, file_size , uploader_id) # saving the metadata to the mongo db.
+    await upload_metadata(file, course_id, file_key, content_type, file_size , uploader_id, visibility, go_public_at) # saving the metadata to the mongo db.
 
-    return UploadFileResponse(course_id=course_id, filename=file.filename, s3_key=file_key, url=file_url)
+    return UploadFileResponse(course_id=course_id, filename=file.filename, s3_key=file_key, url=file_url, visibility=visibility, go_public_at=go_public_at)
 
     
 # delete_file requries the s3_key associated with the file to be deleted. 
@@ -239,6 +260,7 @@ async def replace_file(s3_key: str, new_file: UploadFile) -> None:
         await existing_metadata.save()
     else:
         raise exceptions.FileNotFoundError(detail="File metadata not found.")
+
 
 
 #--------------------------------------------------------------------------------------------------------------------------

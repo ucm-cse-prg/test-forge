@@ -5,10 +5,14 @@ These models are used to define the structure of data that is sent and received 
 """
 from app.models import FileModel, MetaDataModel, CourseModel
 from pydantic import Field, BaseModel
+from typing import Optional
+from datetime import datetime
 
 class UploadFileResponse(FileModel):
     course_id: str = Field(default="")
     s3_key: str = Field(default="")
+    visibility: Optional[str] = Field(default="private")
+    go_public_at: Optional[datetime] = None
 
 class GetFileResponse(FileModel):
     pass

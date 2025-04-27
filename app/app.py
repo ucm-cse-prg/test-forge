@@ -7,6 +7,14 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI
 
+# -------------------------------------------------
+# scheduler related imports 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
+from app.actions import make_files_public
+# -------------------------------------------------
+
 from app.api import router
 from app.config import get_settings
 from app.mongo import close_mongo, init_mongo, check_mongo_connection
@@ -58,13 +66,29 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         None: Control is yielded back after startup actions.
     """
     await startup()  # Connect to MongoDB during app startup
+
+    scheduler = AsyncIOScheduler() # scheduler so that we can automatically make files public when their make_public time is reached. 
+    
+    # adding the job to the scheduler. 
+    scheduler.add_job(
+        make_files_public,
+        CronTrigger(hour=0, minute=0), # making the scheduled function run every day at midnight
+        id="make_files_public_job"
+    )
+
+
+    scheduler.start()  # Start the scheduler
+    print("Scheduler has been started.")
+
     yield  # Yield control back to the application
+
     await shutdown()  # Perform cleanup actions on app shutdown
+    scheduler.shutdown()
+    print("Scheduler has been shutdown.")
 
 
 # Create a FastAPI application instance, using the custom lifespan context manager.
 app = FastAPI(lifespan=lifespan)
-
 
 # Include API routes
 app.include_router(router)

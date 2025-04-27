@@ -16,7 +16,7 @@ class CourseModel(BaseModel):
     visibility: str = Field(default='public')
     collaborators: list[str] = Field(default_factory=list)
     creator_id: Optional[str] = Field(default="")
-    date_created: datetime = Field(default_factory=datetime.utcnow)
+    date_created: datetime = Field(default_factory=datetime.now)
 
     @field_validator("course_id")
     @classmethod
@@ -44,10 +44,12 @@ class MetaDataModel(BaseModel):
     course_id: str = Field(max_length=10) # the foreign key for the course the file belongs to
     filename: Optional[str] = Field(max_length=50)
     s3_key: str = Field(default="")
-    uploaded_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    uploaded_at: Optional[datetime] = Field(default_factory=datetime.now)
     content_type: Optional[str] = Field(default="")
     file_size: Optional[int] = Field(default=0)
     uploader_id: Optional[str] = None
+    visibility: Optional[str] = Field(default="private")
+    go_public_at: Optional[datetime] = Field(default=None)
 
 
 

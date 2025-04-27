@@ -3,6 +3,7 @@ import typing
 from typing import List, Optional
 from functools import wraps
 from botocore.exceptions import ClientError
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse
@@ -30,6 +31,7 @@ def http_exception(func):
     return wrapper
 
 
+#-------------------------------------------------------------------------------------------------------------------------
 @router.get("/")
 @http_exception
 async def root() -> HTMLResponse:
@@ -42,11 +44,11 @@ async def root() -> HTMLResponse:
 
 @router.post("/upload/")
 @http_exception
-async def upload_material(file: UploadFile = File(None), uploader_id: Optional[str] = None, course_id: str = "") -> Schemas.UploadFileResponse:
+async def upload_material(file: UploadFile = File(None), uploader_id: Optional[str] = None, course_id: str = "", visibility: str = 'private', go_public_at: Optional[datetime] = None) -> Schemas.UploadFileResponse:
     if file is None:
         raise HTTPException(status_code=400, detail="File is required.")
     
-    return await Actions.upload_file(file, course_id, uploader_id)
+    return await Actions.upload_file(file, course_id, uploader_id, visibility, go_public_at)
 
 
 @router.delete("/delete/{s3_key}")
