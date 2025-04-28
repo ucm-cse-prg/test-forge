@@ -5,7 +5,7 @@ These Models form the backbone of the application, providing a way to validate a
 Request/response schemas as well as database documents are derived from these models.
 """
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional
+from typing import Optional, Literal
 from datetime import datetime
 
 
@@ -51,6 +51,14 @@ class MetaDataModel(BaseModel):
     visibility: Optional[str] = Field(default="private")
     go_public_at: Optional[datetime] = Field(default=None)
 
+
+# --------------------------------------------------------------------------------------------------------------------------------
+# placeholder User model that will allow me to make a super barebones "authentication" system. 
+class UserModel(BaseModel):
+    username: str = Field(max_length=50)
+    user_type: Literal["student", "professor", "admin"] = Field(default="student") # using Literal to restrict user_type to specific values
+
+# --------------------------------------------------------------------------------------------------------------------------------
 
 
 

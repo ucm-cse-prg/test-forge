@@ -71,8 +71,10 @@ async def retrieve_all_files() -> List[Schemas.GetFileResponse]:
 
 @router.get("/get_metadata/", response_model=List[Schemas.GetMetaDataResponse])
 @http_exception
-async def retrieve_all_metadata() -> List[Schemas.GetMetaDataResponse]:
-    return await Actions.get_metadata()
+async def retrieve_all_metadata(user_type: str, course_id: str) -> List[Schemas.GetMetaDataResponse]:
+    # this is just here to restrict student type users from accessing private metadata for right now. 
+    dummy_user = Models.UserModel(username="dummy", user_type=user_type) # Dummy user for the mock authentication system. 
+    return await Actions.get_metadata(dummy_user, course_id)
     
 
 @router.patch("/update/{s3_key}")

@@ -3,7 +3,7 @@ Database document models for Beanie ODM with MongoDB.
 """
 
 from beanie import Document
-from app.models import MetaDataModel, CourseModel
+from app.models import MetaDataModel, CourseModel, UserModel
 
 # Define Beanie document models that represent your MongoDB collections.
 # Use Beanie's Document base class combined with Pydantic models
@@ -22,6 +22,13 @@ class FileMetaData(Document, MetaDataModel): #inheriting from the MetaDataModel
 class Course(Document, CourseModel): # inheriting from the CourseModel
     class Settings:
         collection = "courses"
+
+#---------------------------------------------------------------------------------------------------------------------------------
+# User document for the placeholder authentication system.
+class User(Document, UserModel): # inheriting from the UserModel
+    class Settings:
+        collection = "users"
+#----------------------------------------------------------------------------------------------------------------------------------
 
 
 # this line is critical for Beanie to recognize the document models.

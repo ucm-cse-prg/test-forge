@@ -17,7 +17,7 @@ import app.exceptions as exceptions
 from app.models import FileModel, CourseModel
 from app.schemas import UploadFileResponse, GetFileResponse
 from app.s3_config import s3_client, BUCKET_NAME
-from app.documents import FileMetaData, Course
+from app.documents import FileMetaData, Course, User
 
 PROJECT_METADATA = metadata("fastapi-app")
 
@@ -121,9 +121,12 @@ async def delete_metadata(s3_key: str) -> None:
 
 
 @run_action
-# making this function in case we need it, not quite sure where it would fit in as of right now
-async def get_metadata() -> List[FileMetaData]: 
-        metadata = await FileMetaData.find_all().to_list()
+async def get_metadata(user: User, course_id: str) -> List[FileMetaData]:
+        if user.user_type == "student":
+            metadata = await FileMetaData.find(FileMetaData.visibility == "public", FileMetaData.course_id == course_id).to_list()
+        else:
+            metadata = await FileMetaData.find(FileMetaData.course_id == course_id).to_list()
+        
         return metadata
 
 #--------------------------------------------------------------------------------------------------------------------------

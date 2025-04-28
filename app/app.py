@@ -11,7 +11,7 @@ from fastapi import FastAPI
 # scheduler related imports 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.interval import IntervalTrigger # for testing. Makes the scheduler run in intervals instead of at a specific time.
 from app.actions import make_files_public
 # -------------------------------------------------
 
@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     # adding the job to the scheduler. 
     scheduler.add_job(
         make_files_public,
-        CronTrigger(hour=0, minute=0), # making the scheduled function run every day at midnight
+        CronTrigger(hour=0, minute=0), # making the scheduled function run every day at midnight. This can be changed to run on intervals instead of a set time. 
         id="make_files_public_job"
     )
 
