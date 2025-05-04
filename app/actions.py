@@ -15,7 +15,7 @@ from datetime import datetime
 # from app.models import UploadResponse, GetFile
 import app.exceptions as exceptions
 from app.models import FileModel, CourseModel
-from app.schemas import UploadFileResponse, GetFileResponse
+from app.schemas import UploadFileResponse, GetFileResponse, GetCourseResponse
 from app.s3_config import s3_client, BUCKET_NAME
 from app.documents import FileMetaData, Course, User
 
@@ -289,3 +289,39 @@ async def create_course(course: CourseModel) -> Course:
     
     await course.insert()
     return course
+
+
+@run_action
+async def get_all_courses() -> List[Course]:
+    courses = await Course.find_all().to_list()
+    return courses
+
+
+@run_action
+async def delete_course(course_id: str) -> None:
+    if not course_id:
+        raise exceptions.MissingParameterError(detail="course_id is required.")
+    
+    course = await Course.find_one(Course.course_id == course_id)
+    if not course:
+        raise exceptions.CourseNotFoundError(detail="Course not found.")
+    
+    await course.delete()
+
+
+@run_action
+async def update_course(course_id: str, course: CourseModel) -> Course:
+    if not course_id or not course.course_name:
+        raise exceptions.MissingParameterError(detail="course_id and course_name are required.")
+    
+    existing_course = await Course.find_one(Course.course_id == course_id)
+    if not existing_course:
+        raise exceptions.CourseNotFoundError(detail="Course not found.")
+    
+    existing_course.course_name = course.course_name
+    existing_course.course_description = course.course_description
+    existing_course.visibility = course.visibility
+    existing_course.collaborators = course.collaborators
+    await existing_course.save()
+    
+    return existing_course

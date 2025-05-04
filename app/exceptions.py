@@ -78,3 +78,14 @@ class FailedToSaveError(APIException):
     def __init__(self, detail: str):
         # Initialize with HTTP 500 status code and a descriptive error message.
         super().__init__(code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=detail)
+
+class CourseNotFoundError(APIException):
+    """
+    Exception raised when a course is not found (HTTP 404).
+
+    Inherits from APIException and automatically assigns a 404 HTTP status code.
+    """
+
+    def __init__(self, detail: str):
+        # Initialize with HTTP 404 status code and a descriptive error message.
+        super().__init__(code=status.HTTP_404_NOT_FOUND, detail=detail)
