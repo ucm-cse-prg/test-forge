@@ -39,21 +39,21 @@ class CourseModel(BaseModel):
 
 class FileModel(BaseModel):
     course_id: str = Field(max_length=200)
-    filename: Optional[str] = Field(max_length=50)
+    filename: Optional[str] = Field(max_length=300)
     s3_key: str = Field()
     url: str = ""
 
     @field_validator("filename")
     @classmethod
     def check_name_length(cls, v: str) -> str:
-        if len(v) > 50:
-            raise ValueError("Filename must be less than 50 characters")
+        if len(v) > 300:
+            raise ValueError("Filename must be less than 300 characters")
         return v
 
 
 class MetaDataModel(BaseModel):
     course_id: str = Field(max_length=200) # the foreign key for the course the file belongs to
-    filename: Optional[str] = Field(max_length=50)
+    filename: Optional[str] = Field(max_length=300)
     s3_key: str = Field(default="")
     url: str = "" 
     uploaded_at: Optional[datetime] = Field(default_factory=datetime.now)

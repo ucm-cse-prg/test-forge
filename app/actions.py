@@ -83,16 +83,23 @@ async def make_files_public() -> None:
 #--------------------------------------------------------------------------------------------------------------------------
 # Metadata related actions
 @run_action
-async def upload_metadata(file: UploadFile, course_id: str, file_key: str,  content_type: Optional[str] = None, file_size: Optional[int] = 0, uploader_id: Optional[str] = None, visibility: Optional[str] = "private", go_public_at: Optional[datetime] = None) -> None:
+async def upload_metadata(file: UploadFile, course_id: str, file_key: str, file_url: str, content_type: Optional[str] = None, file_size: Optional[int] = 0, uploader_id: Optional[str] = None, visibility: Optional[str] = "private", go_public_at: Optional[datetime] = None) -> None:
+    # file_metadata = FileModel(
+    #     course_id = course_id,
+    #     filename=file.filename,
+    #     s3_key=file_key,
+    #     url=s3_client.generate_presigned_url(
+    #     'get_object',
+    #     Params={'Bucket': BUCKET_NAME, 'Key': file_key},
+    #     ExpiresIn=604800  # URL expiration time in seconds
+    # ), # so this current url has an expiration date of 7 days. If we want persistant urls, we have to make the bucket public.
+    # # or generate a new presigned url every time we want to access the file.
+    # )
     file_metadata = FileModel(
         course_id = course_id,
         filename=file.filename,
         s3_key=file_key,
-        url=s3_client.generate_presigned_url(
-        'get_object',
-        Params={'Bucket': BUCKET_NAME, 'Key': file_key},
-        ExpiresIn=604800  # URL expiration time in seconds
-    ),
+        url=file_url,
     )
     
     metadata = await FileMetaData(
@@ -162,7 +169,7 @@ async def upload_file(file: UploadFile, course_id: str, uploader_id: Optional[st
         ExpiresIn=3600  # URL expiration time in seconds
     )
 
-    await upload_metadata(file, course_id, file_key, content_type, file_size , uploader_id, visibility, go_public_at) # saving the metadata to the mongo db.
+    await upload_metadata(file, course_id, file_key, file_url, content_type, file_size , uploader_id, visibility, go_public_at) # saving the metadata to the mongo db.
 
     return UploadFileResponse(course_id=course_id, filename=file.filename, s3_key=file_key, url=file_url, visibility=visibility, go_public_at=go_public_at)
 
@@ -196,8 +203,9 @@ async def get_all_files() -> List[GetFileResponse]:
     files = [] 
     for obj in contents:
         s3_key = obj["Key"]
-        course_id = s3_key.split("_")[0] # extracting the course id from the s3 key
-        filename = "_".join(s3_key.split("_")[1:]) # removing the uuid part of the filename 
+        parts = s3_key.split("_", 2) # extracting the course id from the s3 key
+        course_id, _, filename = parts
+        #filename = "_".join(s3_key.split("_")[1:]) # removing the uuid part of the filename 
             
         # Commented code below is for public urls, will delete when i have access to the kubernetes cluster. 
         # file_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{file_key}"
