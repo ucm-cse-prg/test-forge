@@ -98,7 +98,7 @@ async def replace_material(s3_key: str, file: UploadFile = File(None)) -> dict:
 # Course related endpoints
 @router.post("/create_course/", response_model=Schemas.GetCourseResponse)
 @http_exception
-async def create_course(course: Models.CourseModel) -> Schemas.GetCourseResponse:
+async def create_course(course: Schemas.CreateCourseRequest) -> Schemas.GetCourseResponse:
     return await Actions.create_course(course)
 
 

@@ -25,12 +25,15 @@ class UpdateFileRequest(BaseModel):
 class GetMetaDataResponse(MetaDataModel):
     pass
 
+class CreateCourseRequest(CourseModel):
+    pass
+
 class GetCourseResponse(CourseModel):
     id: Optional[PydanticObjectId] = Field(alias="_id")
-    
     class Config:
         populate_by_name = True
         json_encoders = {
             ObjectId: str,
             PydanticObjectId: str
         }
+        arbitrary_types_allowed = True

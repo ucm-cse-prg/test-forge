@@ -12,7 +12,6 @@ from bson import ObjectId
 
 
 class CourseModel(BaseModel):
-    id: Optional[PydanticObjectId] = Field(alias="_id")
     course_id: str = Field(max_length=10) # going to make the course id the foreign key for Files. 
     course_name: str = Field(max_length=200)
     course_description: Optional[str] = Field(max_length=200)
