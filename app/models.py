@@ -55,6 +55,7 @@ class MetaDataModel(BaseModel):
     course_id: str = Field(max_length=200) # the foreign key for the course the file belongs to
     filename: Optional[str] = Field(max_length=50)
     s3_key: str = Field(default="")
+    url: str = "" 
     uploaded_at: Optional[datetime] = Field(default_factory=datetime.now)
     content_type: Optional[str] = Field(default="")
     file_size: Optional[int] = Field(default=0)

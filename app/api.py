@@ -101,11 +101,13 @@ async def replace_material(s3_key: str, file: UploadFile = File(None)) -> dict:
 async def create_course(course: Models.CourseModel) -> Schemas.GetCourseResponse:
     return await Actions.create_course(course)
 
+
 # basic course retrieval endpoint
 @router.get("/get_all_courses", response_model=List[Schemas.GetCourseResponse])
 @http_exception
 async def get_all_courses() -> List[Schemas.GetCourseResponse]:
     return await Actions.get_all_courses()
+
 
 # basic course deletion endpoint
 @router.delete("/delete_course/{course_id}")
@@ -113,10 +115,18 @@ async def get_all_courses() -> List[Schemas.GetCourseResponse]:
 async def delete_course(course_id: str) -> None:
         return await Actions.delete_course(course_id)
 
+
 # basic course update endpoint
 @router.patch("/update_course/{course_id}")
 @http_exception
 async def update_course(course_id: str, course: Models.CourseModel) -> dict:
     await Actions.update_course(course_id, course)
     return {"detail": "Course updated successfully."}
+
+
+# course specific get request. 
+@router.get("/get_course/{course_id}", response_model=Schemas.GetCourseResponse)
+@http_exception
+async def get_course(course_id: str) -> Schemas.GetCourseResponse:
+    return await Actions.get_course_by_id(course_id)
     

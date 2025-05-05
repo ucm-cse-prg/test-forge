@@ -83,7 +83,7 @@ async def make_files_public() -> None:
 #--------------------------------------------------------------------------------------------------------------------------
 # Metadata related actions
 @run_action
-async def upload_metadata(file: UploadFile, course_id: str, file_key: str, content_type: Optional[str] = None, file_size: Optional[int] = 0, uploader_id: Optional[str] = None, visibility: Optional[str] = "private", go_public_at: Optional[datetime] = None) -> None:
+async def upload_metadata(file: UploadFile, course_id: str, file_key: str,  content_type: Optional[str] = None, file_size: Optional[int] = 0, uploader_id: Optional[str] = None, visibility: Optional[str] = "private", go_public_at: Optional[datetime] = None) -> None:
     file_metadata = FileModel(
         course_id = course_id,
         filename=file.filename,
@@ -91,7 +91,7 @@ async def upload_metadata(file: UploadFile, course_id: str, file_key: str, conte
         url=s3_client.generate_presigned_url(
         'get_object',
         Params={'Bucket': BUCKET_NAME, 'Key': file_key},
-        ExpiresIn=3600  # URL expiration time in seconds
+        ExpiresIn=604800  # URL expiration time in seconds
     ),
     )
     
@@ -99,7 +99,9 @@ async def upload_metadata(file: UploadFile, course_id: str, file_key: str, conte
         course_id = course_id,
         filename=file_metadata.filename,
         s3_key=file_metadata.s3_key,
-        content_type=content_type,
+        url=file_metadata.url,
+        uploaded_at=datetime.now(),
+        content_type=file.content_type,
         file_size=file.size,
         uploader_id=uploader_id,
         visibility=visibility,
@@ -343,3 +345,18 @@ async def update_course(course_id: str, course: CourseModel) -> Course:
     await existing_course.save()
     
     return existing_course
+
+
+# get a course by specific id
+@run_action
+async def get_course_by_id(course_id: str) -> GetCourseResponse:
+    if not course_id:
+        raise exceptions.MissingParameterError(detail="course_id is required.")
+
+    object_id = ObjectId(course_id)
+
+    course = await Course.find_one(Course.id == object_id)
+    if not course:
+        raise exceptions.CourseNotFoundError(detail="Course not found.")
+
+    return GetCourseResponse(**course.model_dump())
