@@ -7,6 +7,8 @@ from app.models import FileModel, MetaDataModel, CourseModel
 from pydantic import Field, BaseModel
 from typing import Optional
 from datetime import datetime
+from beanie import PydanticObjectId
+from bson import ObjectId
 
 class UploadFileResponse(FileModel):
     course_id: str = Field(default="")
@@ -24,4 +26,11 @@ class GetMetaDataResponse(MetaDataModel):
     pass
 
 class GetCourseResponse(CourseModel):
-    pass
+    id: Optional[PydanticObjectId] = Field(alias="_id")
+    
+    class Config:
+        populate_by_name = True
+        json_encoders = {
+            ObjectId: str,
+            PydanticObjectId: str
+        }

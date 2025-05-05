@@ -10,6 +10,7 @@ from fastapi import UploadFile, Query
 from botocore.exceptions import ClientError
 import uuid
 from datetime import datetime
+from bson import ObjectId
 
 #from app.exceptions import InternalServerError
 # from app.models import UploadResponse, GetFile
@@ -291,18 +292,33 @@ async def create_course(course: CourseModel) -> Course:
     return course
 
 
+# @run_action
+# async def get_all_courses() -> List[Course]:
+#     courses = await Course.find_all().to_list()
+#     return courses
 @run_action
-async def get_all_courses() -> List[Course]:
+async def get_all_courses() -> List[GetCourseResponse]:
     courses = await Course.find_all().to_list()
-    return courses
+    
+    course_responses = []# create response objects that include the ObjectId
+    for course in courses:
+        
+        course_dict = course.model_dump(by_alias=True)# convert to dict to ensure all fields are included
 
+        if course.id: # ensure _id is properly converted to string if needed
+            course_dict["_id"] = str(course.id)
+        course_responses.append(GetCourseResponse(**course_dict))
+    
+    return course_responses
 
 @run_action
 async def delete_course(course_id: str) -> None:
     if not course_id:
         raise exceptions.MissingParameterError(detail="course_id is required.")
     
-    course = await Course.find_one(Course.course_id == course_id)
+    object_id = ObjectId(course_id)
+    
+    course = await Course.find_one(Course.id == object_id)
     if not course:
         raise exceptions.CourseNotFoundError(detail="Course not found.")
     
@@ -314,7 +330,9 @@ async def update_course(course_id: str, course: CourseModel) -> Course:
     if not course_id or not course.course_name:
         raise exceptions.MissingParameterError(detail="course_id and course_name are required.")
     
-    existing_course = await Course.find_one(Course.course_id == course_id)
+    object_id = ObjectId(course_id)
+    
+    existing_course = await Course.find_one(Course.id == object_id)
     if not existing_course:
         raise exceptions.CourseNotFoundError(detail="Course not found.")
     

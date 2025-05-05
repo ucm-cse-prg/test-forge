@@ -7,9 +7,12 @@ Request/response schemas as well as database documents are derived from these mo
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, Literal
 from datetime import datetime
+from beanie import PydanticObjectId
+from bson import ObjectId
 
 
 class CourseModel(BaseModel):
+    id: Optional[PydanticObjectId] = Field(alias="_id")
     course_id: str = Field(max_length=10) # going to make the course id the foreign key for Files. 
     course_name: str = Field(max_length=200)
     course_description: Optional[str] = Field(max_length=200)
@@ -24,6 +27,14 @@ class CourseModel(BaseModel):
         if len(v) > 10:
             raise ValueError("Course ID must be less than 10 characters") # assuming course id would be something like "CSE195"
         return v
+    
+    class Config:
+        populate_by_name = True # this is to allow the use of alias in the model
+        json_encoders = {
+            ObjectId: str,
+            PydanticObjectId: str
+        }
+        arbitrary_types_allowed = True
 
 
 class FileModel(BaseModel):
@@ -41,7 +52,7 @@ class FileModel(BaseModel):
 
 
 class MetaDataModel(BaseModel):
-    course_id: str = Field(max_length=10) # the foreign key for the course the file belongs to
+    course_id: str = Field(max_length=200) # the foreign key for the course the file belongs to
     filename: Optional[str] = Field(max_length=50)
     s3_key: str = Field(default="")
     uploaded_at: Optional[datetime] = Field(default_factory=datetime.now)
