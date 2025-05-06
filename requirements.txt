@@ -8,3 +8,8 @@ mypy
 pydantic
 motor
 docker-compose
+qdrant_client
+langchain
+langchain_ollama
+langchain_qdrant
+PyPDF2

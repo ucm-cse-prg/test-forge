@@ -21,6 +21,15 @@ from app.schemas import UploadFileResponse, GetFileResponse, GetCourseResponse
 from app.s3_config import s3_client, BUCKET_NAME
 from app.documents import FileMetaData, Course, User
 
+# the Qdrant related imports 
+from app.qdrant_config import vector_store, llm
+from langchain.schema import Document
+from langchain.prompts import PromptTemplate
+from langchain.chains.combine_documents.stuff import create_stuff_documents_chain
+from langchain.chains.retrieval import create_retrieval_chain
+from PyPDF2 import PdfReader
+
+
 PROJECT_METADATA = metadata("fastapi-app")
 
 # Wrapper function to run action and rais InternalServerError if it fails
@@ -375,3 +384,53 @@ async def get_course_by_id(course_id: str) -> GetCourseResponse:
         raise exceptions.CourseNotFoundError(detail="Course not found.")
 
     return GetCourseResponse(**course.model_dump())
+
+#--------------------------------------------------------------------------------------------------------------------------
+# Qdrant related functions
+# this first function is going on a scheduler alongside the make_files_public function in order to automatically ingest public files and keep private ones from being trained on.
+# theres no current seperation between course materials, meaning that if a file is public, it can be trained on by any course.
+# this is a problem that we will have to solve later on, but for now, this is what I can do. 
+@run_action
+async def upload_pdfs_to_qdrant() -> dict:
+    metadata = await FileMetaData.find(FileMetaData.visibility == "public").to_list() #retrieving all the public files from the database.
+    ingested_count = 0
+
+    for data in metadata:
+        if data.content_type.lower() != "application/pdf": # we only want pdfs ingested for right now according to Michael. 
+            continue
+
+        if not await vector_store.exists(data.s3_key): #checking if its already in the vector store
+            file_obj = s3_client.get_object(Bucket=BUCKET_NAME, Key=data.s3_key) # fetching the file from the s3 
+            pdf_reader = PdfReader(file_obj['Body'])
+            
+            text = ""
+            for page in pdf_reader.pages:
+                content = page.extract_text()
+                if content:
+                    text += content
+
+            doc = Document(page_content=text, metadata={"source": data.s3_key}) # creating a document object
+
+            await vector_store.add_documents([doc])  # uploading to the Qdrant
+            ingested_count += 1 # just to keep count of how many files were ingested.
+
+    return {"Ingested documents": ingested_count}
+
+
+# this will be actually generating the questions based on ingested files. 
+@run_action
+async def generate_quiz_questions(k: int = 5):
+    # retrieving the top k chunks from the Qdrant
+    retriever = vector_store.as_retriever(search_kwargs={"k": k})
+    prompt = PromptTemplate( # building the prompt for question generation
+        f"Generate {k} insightful questions based on the following context:\n\n{{context}}"
+    )
+
+    combine_chain = create_stuff_documents_chain(llm=llm, prompt=prompt) # create a combine-documents chain that stuffs all chunks into the prompt
+    retrieval_chain = create_retrieval_chain(retriever=retriever, combine_docs_chain=combine_chain)# wire up the retrriever and combine docs chain into a single retrieval chain
+
+    output = retrieval_chain.invoke({"input": ""}) # invoke the chain (passing an empty query since our prompt only uses "context")
+    answer = output.get("answer") or output.get("output") or str(output) # the runnable will return a dict with at least an "answer" key
+
+    questions = [q.strip() for q in answer.splitlines() if q.strip()] # split them into individual questions
+    return {"questions": questions}

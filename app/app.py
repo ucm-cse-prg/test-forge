@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger # for testing. Makes the scheduler run in intervals instead of at a specific time.
-from app.actions import make_files_public
+from app.actions import make_files_public, upload_pdfs_to_qdrant
 # -------------------------------------------------
 
 from app.api import router
@@ -76,6 +76,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         id="make_files_public_job"
     )
 
+    scheduler.add_job(
+        upload_pdfs_to_qdrant,
+        IntervalTrigger(seconds=60), # for testing. Makes the scheduler run in intervals instead of at a specific time.
+        id="upload_files_to_qdrant_job"
+    )
 
     scheduler.start()  # Start the scheduler
     print("Scheduler has been started.")
