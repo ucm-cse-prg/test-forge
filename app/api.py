@@ -136,4 +136,4 @@ async def get_course(course_id: str) -> Schemas.GetCourseResponse:
 @router.get("/generate_questions/")
 @http_exception
 async def generate_questions(k: int = 5) -> dict:
-    return await Actions.generate_questions(k)
+    return await Actions.generate_quiz_questions(k)

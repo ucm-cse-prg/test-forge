@@ -6,7 +6,7 @@ Actions for handling the internal logic of API endpoints.
 import typing
 from typing import List, Optional
 from functools import wraps
-from importlib.metadata import metadata
+#from importlib.metadata import metadata
 from fastapi import UploadFile, Query
 from botocore.exceptions import ClientError
 import uuid
@@ -29,8 +29,9 @@ from langchain.chains.combine_documents.stuff import create_stuff_documents_chai
 from langchain.chains.retrieval import create_retrieval_chain
 from PyPDF2 import PdfReader
 
-
-PROJECT_METADATA = metadata("fastapi-app")
+# this was causing issues with the Qdrant connection for some reason that I really cant figure out.
+# therefore im just gonna comment it out. I dont think it was important anyway. 
+#PROJECT_METADATA = metadata("fastapi-app")
 
 # Wrapper function to run action and rais InternalServerError if it fails
 @typing.no_type_check
@@ -52,9 +53,12 @@ def run_action(action):
 @run_action
 async def home_page() -> str:
     # Get project metadata
-    project_name = PROJECT_METADATA["Name"]
-    project_version = PROJECT_METADATA["Version"]
-    project_description = PROJECT_METADATA["Summary"]
+    #project_name = PROJECT_METADATA["Name"]
+    #project_version = PROJECT_METADATA["Version"]
+    #project_description = PROJECT_METADATA["Summary"]
+    project_name = "Test Forge"
+    project_description = "Ai practice quiz generation app"
+    project_version = "0.0.1"
 
     # Generate mockup HTML content for the home page
     content = f"""
@@ -390,12 +394,14 @@ async def get_course_by_id(course_id: str) -> GetCourseResponse:
 # this first function is going on a scheduler alongside the make_files_public function in order to automatically ingest public files and keep private ones from being trained on.
 # theres no current seperation between course materials, meaning that if a file is public, it can be trained on by any course.
 # this is a problem that we will have to solve later on, but for now, this is what I can do. 
+
+# both Qdrant functions are working right now. 
 @run_action
 async def upload_pdfs_to_qdrant() -> dict:
-    metadata = await FileMetaData.find(FileMetaData.visibility == "public").to_list() #retrieving all the public files from the database.
+    public_metadata = await FileMetaData.find(FileMetaData.visibility == "public").to_list() #retrieving all the public files from the database.
     ingested_count = 0
 
-    for data in metadata:
+    for data in public_metadata:
         if data.content_type.lower() != "application/pdf": # we only want pdfs ingested for right now according to Michael. 
             continue
 
@@ -422,9 +428,13 @@ async def upload_pdfs_to_qdrant() -> dict:
 async def generate_quiz_questions(k: int = 5):
     # retrieving the top k chunks from the Qdrant
     retriever = vector_store.as_retriever(search_kwargs={"k": k})
-    prompt = PromptTemplate( # building the prompt for question generation
-        f"Generate {k} insightful questions based on the following context:\n\n{{context}}"
-    )
+    # prompt = PromptTemplate( # building the prompt for question generation
+    #     f"Generate {k} insightful questions based on the following context:\n\n{{context}}"
+    # )
+    prompt = PromptTemplate(
+        input_variables=["context"],
+        template=f"Generate {k} insightful questions based on the following context:\n\n{{context}}"
+        )
 
     combine_chain = create_stuff_documents_chain(llm=llm, prompt=prompt) # create a combine-documents chain that stuffs all chunks into the prompt
     retrieval_chain = create_retrieval_chain(retriever=retriever, combine_docs_chain=combine_chain)# wire up the retrriever and combine docs chain into a single retrieval chain

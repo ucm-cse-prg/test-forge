@@ -15,10 +15,10 @@ import os
 env_path = Path('.') / 'creds.env'
 load_dotenv(dotenv_path=env_path)
 
-qdrant_url = os.getenv("qdrant_url")
-collection_name = os.getenv("collection_name")
-ollama_model = os.getenv("ollama_model")
-ollama_url = os.getenv("ollama_url")
+qdrant_url = os.getenv("QDRANT_URL")
+collection_name = os.getenv("COLLECTION_NAME")
+ollama_model = os.getenv("OLLAMA_MODEL")
+ollama_url = os.getenv("OLLAMA_URL")
 
 qdrant_client = QdrantClient(url=qdrant_url)
 if not qdrant_client.collection_exists(collection_name):

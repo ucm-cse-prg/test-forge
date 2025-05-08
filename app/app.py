@@ -78,7 +78,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
 
     scheduler.add_job(
         upload_pdfs_to_qdrant,
-        IntervalTrigger(seconds=60), # for testing. Makes the scheduler run in intervals instead of at a specific time.
+        #IntervalTrigger(seconds=60), # for testing. Makes the scheduler run in intervals instead of at a specific time.
+        CronTrigger(hour=0, minute=0), # just gonna make it run at midnight for default. If we want it more frequently, then we can do that. 
         id="upload_files_to_qdrant_job"
     )
 

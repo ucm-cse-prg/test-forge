@@ -62,6 +62,31 @@ class Settings(BaseSettings):
         title="AWS Secret Access Key",
         description="The AWS secret access key for authentication.",
     )
+
+    qdrant_url: str = Field(
+        default="",
+        title="Qdrant URL",
+        description="The URL of the Qdrant instance.",
+    )
+
+    collection_name: str = Field(
+        default="",
+        title="Collection Name",
+        description="The name of the Qdrant collection.",
+    )
+
+    ollama_model: str = Field(
+        default="",
+        title="Ollama Model",
+        description="The name of the Ollama model to use.",
+    )
+
+    ollama_url: str = Field(
+        default="",
+        title="Ollama URL",
+        description="The URL of the Ollama instance.",
+    )
+    
     # Load settings from a .env file.
     model_config = SettingsConfigDict(env_file="creds.env") # using creds.env, not just .env
 
