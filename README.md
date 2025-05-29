@@ -1,6 +1,14 @@
-# FastAPI Application Template
+# Test Forge
 
-This repository provides a template for creating a FastAPI application with MongoDB (via Beanie and Motor) integration and includes a command-line interface built with Typer. It also supports Docker containerization and unit testing with pytest, making deployment and development easier.
+Test Forge introduces a novel AI-driven workflow for assessment generation that addresses these limitations through:
+
+- Direct ingestion of instructor-provided course materials.
+- Automated extraction of key topics and their relative importance.
+- Fine-grained control over question difficulty and cognitive distribution (via Bloom’s Taxonomy).
+- An instructor-in-the-loop system allowing dynamic feedback, editing, and model fine-tuning.
+- Transparent integration of retrieval-augmented generation (RAG) and adaptive LLM techniques.
+
+This end-to-end, flexible system goes beyond existing static or black-box test generators, fostering a collaborative and pedagogically-informed approach to AI-powered assessment.
 
 ## Table of Contents
 
